@@ -16,6 +16,7 @@
     </stack>
     <stack class="stack">
       <div class="touch-layer" onclick="onBoardClick"></div>
+      <input class="exit-btn" type="button" value="退出" onclick="exitApp" />
       <input class="putbtn" type="button" value="{{ btnTxt }}" onclick="onBtnClick" />
     </stack>
   </div>
@@ -406,47 +407,16 @@ export default {
     }
   },
 
-  onBoardMove(deltaX, deltaY) {
-    if (deltaX !== 0) {
-      let next = this.startX + 120 * deltaX
-      if (next >= OFFSET_MAX_X) {
-        next = OFFSET_MAX_X
-      }
-      if (next <= OFFSET_MIN_X) {
-        next = OFFSET_MIN_X
-      }
-      this.startX = next
-    } else if (deltaY !== 0) {
-      let next = this.startY + 120 * deltaY
-      if (next >= OFFSET_MAX_Y) {
-        next = OFFSET_MAX_Y
-      }
-      if (next <= OFFSET_MIN_Y) {
-        next = OFFSET_MIN_Y
-      }
-      this.startY = next
-    }
-    this.jsonstr += 1
-  },
-
-  onMoveLeft() {
-    this.onBoardMove(1, 0)
-  },
-
-  onMoveRight() {
-    this.onBoardMove(-1, 0)
-  },
-
-  onMoveUp() {
-    this.onBoardMove(0, 1)
-  },
-
-  onMoveDown() {
-    this.onBoardMove(0, -1)
-  },
-
   exit() {
     systemApp.terminate()
+  },
+
+  exitApp() {
+    if (typeof qa !== "undefined" && typeof qa.exitApplication === "function") {
+      qa.exitApplication()
+    } else {
+      this.exit()
+    }
   },
 
   onDestroy() {
@@ -489,36 +459,12 @@ export default {
   text-align: right;
 }
 
-.control {
-  position: absolute;
-}
-
 .board-grid {
   position: absolute;
   background-color: #f4d9b5;
   border: 2px solid #c18f4a;
   border-radius: 12px;
   z-index: 1;
-}
-
-.control-left {
-  left: 20px;
-  top: 168px;
-}
-
-.control-right {
-  left: 272px;
-  top: 168px;
-}
-
-.control-up {
-  left: 146px;
-  top: 20px;
-}
-
-.control-down {
-  left: 146px;
-  top: 336px;
 }
 
 .putbtn {
@@ -531,5 +477,17 @@ export default {
   color: #ffffff;
   background-color: rgb(85, 167, 247);
   border-radius: 30px;
+}
+
+.exit-btn {
+  position: absolute;
+  top: 24px;
+  left: 88px;
+  width: 160px;
+  height: 76px;
+  border-radius: 30px;
+  font-size: 30px;
+  color: #ffffff;
+  background-color: rgb(85, 167, 247);
 }
 </style>
