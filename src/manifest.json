@@ -1,6 +1,6 @@
 {
-  "package": "com.application.watch.demo",
-  "name": "better-gobang",
+  "package": "top.zaona.gobang.better",
+  "name": "五子棋",
   "versionName": "1.0.0",
   "versionCode": 1,
   "minPlatformVersion": 1000,
@@ -11,6 +11,12 @@
   "features": [
     {
       "name": "system.router"
+    },
+    {
+      "name": "system.prompt"
+    },
+    {
+      "name": "system.app"
     }
   ],
   "config": {
@@ -22,9 +28,6 @@
     "pages": {
       "pages/index": {
         "component": "index"
-      },
-      "pages/detail": {
-        "component": "detail"
       }
     }
   }

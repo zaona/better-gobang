@@ -1,48 +1,535 @@
 <template>
   <div class="demo-page">
-    <text class="title">{{ $t("a.b") }},欢迎打开{{ title }}</text>
-    <!-- 点击跳转详情页 -->
-    <input class="btn" type="button" value="跳转到详情页" onclick="routeDetail" />
+    <stack class="stack">
+      <text class="move-counter">{{ jsonstr }}</text>
+      <div
+        class="board-grid"
+        style="left: {{ startX }}px; top: {{ startY }}px; width: {{ boardSize }}px; height: {{ boardSize }}px"
+      ></div>
+      <block for="{{ hmWds }}" tid="id">
+        <image
+          src="/common/images/{{ $item.param.src }}"
+          show="{{ $item.visible }}"
+          style="left: {{ $item.param.x + startX }}px; top: {{ $item.param.y + startY }}px; width: {{ $item.param.w }}px; height: {{ $item.param.h }}px; z-index: 2"
+        ></image>
+      </block>
+    </stack>
+    <stack class="stack">
+      <div class="touch-layer" onclick="onBoardClick"></div>
+      <input class="putbtn" type="button" value="{{ btnTxt }}" onclick="onBtnClick" />
+    </stack>
   </div>
 </template>
 
 <script>
-import router from "@system.router"
+import prompt from "@system.prompt"
+import systemApp from "@system.app"
+import { createHmUI } from "../../common/hm-ui"
+
+const BOARD_SIZE = 15
+const WIN_LENGTH = 5
+const SCREEN_WIDTH = 336
+const SCREEN_HEIGHT = 480
+const BOARD_PIXEL = SCREEN_WIDTH
+const CELL_SIZE = BOARD_PIXEL / BOARD_SIZE
+const PIECE_SIZE = CELL_SIZE * 0.8
+const PIECE_OFFSET = (CELL_SIZE - PIECE_SIZE) / 2
+const CURSOR_SIZE = CELL_SIZE * 1.2
+const CURSOR_OFFSET = (CELL_SIZE - CURSOR_SIZE) / 2
+const INITIAL_OFFSET_X = 0
+const INITIAL_OFFSET_Y = (SCREEN_HEIGHT - BOARD_PIXEL) / 2
+const OFFSET_MAX_X = INITIAL_OFFSET_X
+const OFFSET_MIN_X = INITIAL_OFFSET_X
+const OFFSET_MAX_Y = INITIAL_OFFSET_Y
+const OFFSET_MIN_Y = INITIAL_OFFSET_Y
+const PLAYER = 1
+const AI = 2
+
+function createMatrix(size, initialValue, nested = true) {
+  if (nested) {
+    return Array.from({ length: size }, () => Array(size).fill(initialValue))
+  }
+  return Array(size).fill(initialValue)
+}
 
 export default {
-  // 页面级组件的数据模型，影响传入数据的覆盖机制：private内定义的属性不允许被覆盖
   private: {
-    title: "示例页面"
+    hmWds: [],
+    jsonstr: 0,
+    startX: INITIAL_OFFSET_X,
+    startY: INITIAL_OFFSET_Y,
+    btnTxt: "开始游戏",
+    boardSize: BOARD_PIXEL
   },
 
-  routeDetail() {
-    // 跳转到应用内的某个页面，router用法详见：文档->接口->页面路由
-    router.push({
-      uri: "/pages/detail"
+  onInit() {
+    this.hmUI = createHmUI(this)
+    this.prepareWinRefs()
+    this.resetRuntimeState()
+  },
+
+  prepareWinRefs() {
+    this.winRefs = Array.from({ length: BOARD_SIZE }, () =>
+      Array.from({ length: BOARD_SIZE }, () => [])
+    )
+    let index = 0
+
+    // vertical lines
+    for (let col = 0; col < BOARD_SIZE; col++) {
+      for (let row = 0; row <= BOARD_SIZE - WIN_LENGTH; row++) {
+        for (let offset = 0; offset < WIN_LENGTH; offset++) {
+          this.winRefs[col][row + offset].push(index)
+        }
+        index++
+      }
+    }
+
+    // horizontal lines
+    for (let row = 0; row < BOARD_SIZE; row++) {
+      for (let col = 0; col <= BOARD_SIZE - WIN_LENGTH; col++) {
+        for (let offset = 0; offset < WIN_LENGTH; offset++) {
+          this.winRefs[col + offset][row].push(index)
+        }
+        index++
+      }
+    }
+
+    // diagonal left-top to right-bottom
+    for (let col = 0; col <= BOARD_SIZE - WIN_LENGTH; col++) {
+      for (let row = 0; row <= BOARD_SIZE - WIN_LENGTH; row++) {
+        for (let offset = 0; offset < WIN_LENGTH; offset++) {
+          this.winRefs[col + offset][row + offset].push(index)
+        }
+        index++
+      }
+    }
+
+    // diagonal left-bottom to right-top
+    for (let col = 0; col <= BOARD_SIZE - WIN_LENGTH; col++) {
+      for (let row = BOARD_SIZE - 1; row >= WIN_LENGTH - 1; row--) {
+        for (let offset = 0; offset < WIN_LENGTH; offset++) {
+          this.winRefs[col + offset][row - offset].push(index)
+        }
+        index++
+      }
+    }
+
+    this.totalPatterns = index
+  },
+
+  resetRuntimeState() {
+    this.board = createMatrix(BOARD_SIZE, 0)
+    this.zone = createMatrix(BOARD_SIZE, 0)
+    this.playerWins = createMatrix(this.totalPatterns, 0, false)
+    this.aiWins = createMatrix(this.totalPatterns, 0, false)
+    this.hmWds = []
+    this.startX = INITIAL_OFFSET_X
+    this.startY = INITIAL_OFFSET_Y
+    this.selectedCol = 0
+    this.selectedRow = 0
+    this.hasSelection = false
+    this.playerCursor = null
+    this.aiCursor = null
+    this.isPlayerTurn = true
+    this.gameFinished = true
+    this.btnTxt = "开始游戏"
+  },
+
+  onBtnClick() {
+    if (this.gameFinished) {
+      this.startGame()
+    } else {
+      this.handlePlayerMove()
+    }
+    this.jsonstr += 1
+  },
+
+  startGame() {
+    this.resetRuntimeState()
+    this.gameFinished = false
+    this.btnTxt = "落子"
+    this.playerCursor = this.hmUI.createWidget(this.hmUI.widget.IMG, {
+      x: -CURSOR_SIZE,
+      y: -CURSOR_SIZE,
+      w: CURSOR_SIZE,
+      h: CURSOR_SIZE,
+      src: "rect57.png"
     })
+    this.aiCursor = this.hmUI.createWidget(this.hmUI.widget.IMG, {
+      x: -CURSOR_SIZE,
+      y: -CURSOR_SIZE,
+      w: CURSOR_SIZE,
+      h: CURSOR_SIZE,
+      src: "rect57_red.png"
+    })
+
+    const playerStarts = Math.round(Math.random()) === 0
+    this.isPlayerTurn = playerStarts
+
+    if (!playerStarts) {
+      this.placeAiMove(8, 8)
+    }
+  },
+
+  handlePlayerMove() {
+    if (!this.isPlayerTurn) {
+      return
+    }
+
+    if (!this.hasSelection || this.board[this.selectedCol][this.selectedRow] !== 0) {
+      prompt.showToast({
+        message: "请先点击棋牌，选择落子位置",
+        duration: 2000
+      })
+      return
+    }
+
+    this.dropPiece(this.selectedCol, this.selectedRow, PLAYER)
+    this.hasSelection = false
+
+    if (!this.gameFinished) {
+      this.isPlayerTurn = false
+      this.autoAiMove()
+    }
+  },
+
+  dropPiece(col, row, owner) {
+    const x = col * CELL_SIZE + PIECE_OFFSET
+    const y = row * CELL_SIZE + PIECE_OFFSET
+    const src = owner === PLAYER ? "black.png" : "white.png"
+    this.hmUI.createWidget(this.hmUI.widget.IMG, {
+      x,
+      y,
+      w: PIECE_SIZE,
+      h: PIECE_SIZE,
+      src
+    })
+
+    this.board[col][row] = owner
+    this.markZone(col, row)
+    const won = this.updateWins(col, row, owner)
+
+    if (won) {
+      prompt.showToast({
+        message: owner === PLAYER ? "恭喜获得胜利！" : "AI胜利",
+        duration: owner === PLAYER ? 4000 : 3000
+      })
+      this.finishGame()
+    }
+  },
+
+  markZone(col, row) {
+    this.zone[col][row] = 1
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = -1; dy <= 1; dy++) {
+        const nextX = col + dx
+        const nextY = row + dy
+        if (
+          nextX >= 0 &&
+          nextX < BOARD_SIZE &&
+          nextY >= 0 &&
+          nextY < BOARD_SIZE &&
+          this.zone[nextX][nextY] === 0
+        ) {
+          this.zone[nextX][nextY] = 2
+        }
+      }
+    }
+  },
+
+  updateWins(col, row, owner) {
+    let hasWon = false
+    const target = owner === PLAYER ? this.playerWins : this.aiWins
+    const rival = owner === PLAYER ? this.aiWins : this.playerWins
+
+    this.winRefs[col][row].forEach((idx) => {
+      target[idx] += 1
+      rival[idx] = WIN_LENGTH + 1
+      if (target[idx] === WIN_LENGTH) {
+        hasWon = true
+      }
+    })
+
+    return hasWon
+  },
+
+  finishGame() {
+    this.gameFinished = true
+    this.btnTxt = "开始游戏"
+  },
+
+  autoAiMove() {
+    const pick = this.pickBestMove()
+    if (!pick) {
+      prompt.showToast({
+        message: "平局，游戏结束",
+        duration: 4000
+      })
+      this.finishGame()
+      return
+    }
+    this.placeAiMove(pick.col, pick.row)
+  },
+
+  placeAiMove(col, row) {
+    this.dropPiece(col, row, AI)
+    this.updateCursor(col, row, false)
+    if (!this.gameFinished) {
+      this.isPlayerTurn = true
+    }
+  },
+
+  pickBestMove() {
+    let hasCandidate = false
+    let bestScore = 0
+    let bestPlayerScore = 0
+    let bestAiScore = 0
+    let bestCol = 0
+    let bestRow = 0
+
+    const playerBoard = createMatrix(BOARD_SIZE, 0)
+    const aiBoard = createMatrix(BOARD_SIZE, 0)
+
+    for (let col = 0; col < BOARD_SIZE; col++) {
+      for (let row = 0; row < BOARD_SIZE; row++) {
+        if (this.zone[col][row] !== 2 || this.board[col][row] !== 0) {
+          continue
+        }
+
+        this.winRefs[col][row].forEach((idx) => {
+          switch (this.playerWins[idx]) {
+            case 1:
+              playerBoard[col][row] += 200
+              break
+            case 2:
+              playerBoard[col][row] += 400
+              break
+            case 3:
+              playerBoard[col][row] += 2000
+              break
+            case 4:
+              playerBoard[col][row] += 10000
+              break
+            default:
+              break
+          }
+          switch (this.aiWins[idx]) {
+            case 1:
+              aiBoard[col][row] += 220
+              break
+            case 2:
+              aiBoard[col][row] += 420
+              break
+            case 3:
+              aiBoard[col][row] += 2100
+              break
+            case 4:
+              aiBoard[col][row] += 20000
+              break
+            default:
+              break
+          }
+        })
+
+        const playerScore = playerBoard[col][row]
+        const aiScore = aiBoard[col][row]
+
+        if (
+          playerScore > bestScore ||
+          (playerScore === bestScore && aiScore > bestAiScore)
+        ) {
+          bestScore = playerScore
+          bestPlayerScore = playerScore
+          bestAiScore = aiScore
+          bestCol = col
+          bestRow = row
+          hasCandidate = true
+        }
+
+        if (aiScore > bestScore || (aiScore === bestScore && playerScore > bestPlayerScore)) {
+          bestScore = aiScore
+          bestPlayerScore = playerScore
+          bestAiScore = aiScore
+          bestCol = col
+          bestRow = row
+          hasCandidate = true
+        }
+      }
+    }
+
+    if (!hasCandidate) {
+      return null
+    }
+
+    return {
+      col: bestCol,
+      row: bestRow
+    }
+  },
+
+  onBoardClick(event) {
+    if (this.gameFinished || !this.isPlayerTurn) {
+      return
+    }
+
+    const boardX = event.offsetX - this.startX
+    const boardY = event.offsetY - this.startY
+    const col = Math.floor(boardX / CELL_SIZE)
+    const row = Math.floor(boardY / CELL_SIZE)
+
+    if (
+      col < 0 ||
+      col >= BOARD_SIZE ||
+      row < 0 ||
+      row >= BOARD_SIZE ||
+      this.board[col][row] !== 0
+    ) {
+      return
+    }
+
+    this.selectedCol = col
+    this.selectedRow = row
+    this.hasSelection = true
+    this.updateCursor(col, row, true)
+    this.jsonstr += 1
+  },
+
+  updateCursor(col, row, isPlayer) {
+    const x = col * CELL_SIZE + CURSOR_OFFSET
+    const y = row * CELL_SIZE + CURSOR_OFFSET
+    const cursor = isPlayer ? this.playerCursor : this.aiCursor
+    if (cursor) {
+      cursor.setProperty(this.hmUI.prop.MORE, {
+        x,
+        y
+      })
+    }
+  },
+
+  onBoardMove(deltaX, deltaY) {
+    if (deltaX !== 0) {
+      let next = this.startX + 120 * deltaX
+      if (next >= OFFSET_MAX_X) {
+        next = OFFSET_MAX_X
+      }
+      if (next <= OFFSET_MIN_X) {
+        next = OFFSET_MIN_X
+      }
+      this.startX = next
+    } else if (deltaY !== 0) {
+      let next = this.startY + 120 * deltaY
+      if (next >= OFFSET_MAX_Y) {
+        next = OFFSET_MAX_Y
+      }
+      if (next <= OFFSET_MIN_Y) {
+        next = OFFSET_MIN_Y
+      }
+      this.startY = next
+    }
+    this.jsonstr += 1
+  },
+
+  onMoveLeft() {
+    this.onBoardMove(1, 0)
+  },
+
+  onMoveRight() {
+    this.onBoardMove(-1, 0)
+  },
+
+  onMoveUp() {
+    this.onBoardMove(0, 1)
+  },
+
+  onMoveDown() {
+    this.onBoardMove(0, -1)
+  },
+
+  exit() {
+    systemApp.terminate()
+  },
+
+  onDestroy() {
+    if (this.timer) {
+      clearInterval(this.timer)
+    }
+    this.timer = null
   }
 }
 </script>
 
 <style>
 .demo-page {
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
+  width: 336px;
+  height: 480px;
+  position: relative;
+  background-color: #000000;
 }
 
-.title {
-  font-size: 20px;
-  text-align: center;
+.stack {
+  width: 336px;
+  height: 480px;
+  position: absolute;
+  left: 0;
+  top: 0;
 }
 
-.btn {
-  width: 200px;
-  height: 40px;
-  margin-top: 20px;
-  border-radius: 5px;
-  background-color: #09ba07;
-  font-size: 20px;
+.touch-layer {
+  width: 336px;
+  height: 480px;
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.move-counter {
+  position: absolute;
+  left: -30px;
+  top: -30px;
+  text-align: right;
+}
+
+.control {
+  position: absolute;
+}
+
+.board-grid {
+  position: absolute;
+  background-color: #f4d9b5;
+  border: 2px solid #c18f4a;
+  border-radius: 12px;
+  z-index: 1;
+}
+
+.control-left {
+  left: 20px;
+  top: 168px;
+}
+
+.control-right {
+  left: 272px;
+  top: 168px;
+}
+
+.control-up {
+  left: 146px;
+  top: 20px;
+}
+
+.control-down {
+  left: 146px;
+  top: 336px;
+}
+
+.putbtn {
+  width: 160px;
+  height: 76px;
+  position: absolute;
+  top: 402px;
+  left: 88px;
+  font-size: 30px;
   color: #ffffff;
+  background-color: rgb(85, 167, 247);
+  border-radius: 30px;
 }
 </style>
