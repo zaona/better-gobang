@@ -6,6 +6,18 @@
         class="board-grid"
         style="left: {{ startX }}px; top: {{ startY }}px; width: {{ boardSize }}px; height: {{ boardSize }}px"
       ></div>
+      <block for="{{ verticalLines }}" tid="idx">
+        <div
+          class="grid-line vertical"
+          style="left: {{ startX + $item }}px; top: {{ startY }}px; height: {{ boardSize }}px"
+        ></div>
+      </block>
+      <block for="{{ horizontalLines }}" tid="idx">
+        <div
+          class="grid-line horizontal"
+          style="left: {{ startX }}px; top: {{ startY + $item }}px; width: {{ boardSize }}px"
+        ></div>
+      </block>
       <block for="{{ hmWds }}" tid="id">
         <image
           src="/common/images/{{ $item.param.src }}"
@@ -60,13 +72,25 @@ export default {
     startX: INITIAL_OFFSET_X,
     startY: INITIAL_OFFSET_Y,
     btnTxt: "开始游戏",
-    boardSize: BOARD_PIXEL
+    boardSize: BOARD_PIXEL,
+    verticalLines: [],
+    horizontalLines: []
   },
 
   onInit() {
     this.hmUI = createHmUI(this)
+    this.buildGridLines()
     this.prepareWinRefs()
     this.resetRuntimeState()
+  },
+
+  buildGridLines() {
+    const positions = []
+    for (let i = 0; i <= BOARD_SIZE; i++) {
+      positions.push(i * CELL_SIZE)
+    }
+    this.verticalLines = positions
+    this.horizontalLines = positions
   },
 
   prepareWinRefs() {
@@ -462,9 +486,25 @@ export default {
 .board-grid {
   position: absolute;
   background-color: #f4d9b5;
-  border: 2px solid #c18f4a;
+  border: 3px solid #a66a1f;
   border-radius: 12px;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
   z-index: 1;
+}
+
+.grid-line {
+  position: absolute;
+  background-color: #b5761e;
+  opacity: 0.9;
+  z-index: 2;
+}
+
+.grid-line.vertical {
+  width: 2px;
+}
+
+.grid-line.horizontal {
+  height: 2px;
 }
 
 .putbtn {
