@@ -18,13 +18,24 @@
           style="left: {{ startX }}px; top: {{ startY + $item }}px; width: {{ boardSize }}px"
         ></div>
       </block>
-      <block for="{{ hmWds }}" tid="id">
+      <block for="{{ pieces }}" tid="id">
         <image
-          src="/common/images/{{ $item.param.src }}"
-          show="{{ $item.visible }}"
-          style="left: {{ $item.param.x + startX }}px; top: {{ $item.param.y + startY }}px; width: {{ $item.param.w }}px; height: {{ $item.param.h }}px; z-index: 2"
+          src="/common/images/{{ $item.src }}"
+          style="left: {{ $item.x + startX }}px; top: {{ $item.y + startY }}px; width: {{ $item.w }}px; height: {{ $item.h }}px; z-index: 2"
         ></image>
       </block>
+      <image
+        class="cursor player"
+        show="{{ playerCursor.visible }}"
+        src="/common/images/{{ playerCursor.src }}"
+        style="left: {{ playerCursor.x + startX }}px; top: {{ playerCursor.y + startY }}px; width: {{ playerCursor.w }}px; height: {{ playerCursor.h }}px; z-index: 3"
+      ></image>
+      <image
+        class="cursor ai"
+        show="{{ aiCursor.visible }}"
+        src="/common/images/{{ aiCursor.src }}"
+        style="left: {{ aiCursor.x + startX }}px; top: {{ aiCursor.y + startY }}px; width: {{ aiCursor.w }}px; height: {{ aiCursor.h }}px; z-index: 3"
+      ></image>
     </stack>
     <stack class="stack">
       <div class="touch-layer" onclick="onBoardClick"></div>
@@ -37,7 +48,6 @@
 <script>
 import prompt from "@system.prompt"
 import systemApp from "@system.app"
-import { createHmUI } from "../../common/hm-ui"
 
 const BOARD_SIZE = 15
 const WIN_LENGTH = 5
@@ -58,6 +68,17 @@ const OFFSET_MIN_Y = INITIAL_OFFSET_Y
 const PLAYER = 1
 const AI = 2
 
+function createCursorState(src) {
+  return {
+    src,
+    x: -CURSOR_SIZE,
+    y: -CURSOR_SIZE,
+    w: CURSOR_SIZE,
+    h: CURSOR_SIZE,
+    visible: false
+  }
+}
+
 function createMatrix(size, initialValue, nested = true) {
   if (nested) {
     return Array.from({ length: size }, () => Array(size).fill(initialValue))
@@ -67,18 +88,20 @@ function createMatrix(size, initialValue, nested = true) {
 
 export default {
   private: {
-    hmWds: [],
+    pieces: [],
     jsonstr: 0,
     startX: INITIAL_OFFSET_X,
     startY: INITIAL_OFFSET_Y,
     btnTxt: "开始游戏",
     boardSize: BOARD_PIXEL,
     verticalLines: [],
-    horizontalLines: []
+    horizontalLines: [],
+    playerCursor: createCursorState("rect57.png"),
+    aiCursor: createCursorState("rect57_red.png"),
+    nextPieceId: 1
   },
 
   onInit() {
-    this.hmUI = createHmUI(this)
     this.buildGridLines()
     this.prepareWinRefs()
     this.resetRuntimeState()
@@ -147,14 +170,15 @@ export default {
     this.zone = createMatrix(BOARD_SIZE, 0)
     this.playerWins = createMatrix(this.totalPatterns, 0, false)
     this.aiWins = createMatrix(this.totalPatterns, 0, false)
-    this.hmWds = []
+    this.pieces = []
+    this.nextPieceId = 1
     this.startX = INITIAL_OFFSET_X
     this.startY = INITIAL_OFFSET_Y
     this.selectedCol = 0
     this.selectedRow = 0
     this.hasSelection = false
-    this.playerCursor = null
-    this.aiCursor = null
+    this.playerCursor = createCursorState("rect57.png")
+    this.aiCursor = createCursorState("rect57_red.png")
     this.isPlayerTurn = true
     this.gameFinished = true
     this.btnTxt = "开始游戏"
@@ -173,20 +197,6 @@ export default {
     this.resetRuntimeState()
     this.gameFinished = false
     this.btnTxt = "落子"
-    this.playerCursor = this.hmUI.createWidget(this.hmUI.widget.IMG, {
-      x: -CURSOR_SIZE,
-      y: -CURSOR_SIZE,
-      w: CURSOR_SIZE,
-      h: CURSOR_SIZE,
-      src: "rect57.png"
-    })
-    this.aiCursor = this.hmUI.createWidget(this.hmUI.widget.IMG, {
-      x: -CURSOR_SIZE,
-      y: -CURSOR_SIZE,
-      w: CURSOR_SIZE,
-      h: CURSOR_SIZE,
-      src: "rect57_red.png"
-    })
 
     const playerStarts = Math.round(Math.random()) === 0
     this.isPlayerTurn = playerStarts
@@ -222,13 +232,15 @@ export default {
     const x = col * CELL_SIZE + PIECE_OFFSET
     const y = row * CELL_SIZE + PIECE_OFFSET
     const src = owner === PLAYER ? "black.png" : "white.png"
-    this.hmUI.createWidget(this.hmUI.widget.IMG, {
+    const piece = {
+      id: this.nextPieceId++,
       x,
       y,
       w: PIECE_SIZE,
       h: PIECE_SIZE,
       src
-    })
+    }
+    this.pieces = [...this.pieces, piece]
 
     this.board[col][row] = owner
     this.markZone(col, row)
@@ -423,11 +435,19 @@ export default {
     const x = col * CELL_SIZE + CURSOR_OFFSET
     const y = row * CELL_SIZE + CURSOR_OFFSET
     const cursor = isPlayer ? this.playerCursor : this.aiCursor
-    if (cursor) {
-      cursor.setProperty(this.hmUI.prop.MORE, {
-        x,
-        y
-      })
+    if (!cursor) {
+      return
+    }
+    const nextCursor = {
+      ...cursor,
+      x,
+      y,
+      visible: true
+    }
+    if (isPlayer) {
+      this.playerCursor = nextCursor
+    } else {
+      this.aiCursor = nextCursor
     }
   },
 
