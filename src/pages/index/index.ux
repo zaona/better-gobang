@@ -13,13 +13,13 @@
       <block for="{{ verticalLines }}" tid="idx">
         <div
           class="grid-line vertical"
-          style="left: {{ startX + $item }}px; top: {{ startY }}px; height: {{ boardSize }}px"
+          style="left: {{ startX + $item - gridLineWidth / 2 }}px; top: {{ startY }}px; height: {{ boardSize }}px; width: {{ gridLineWidth }}px"
         ></div>
       </block>
       <block for="{{ horizontalLines }}" tid="idx">
         <div
           class="grid-line horizontal"
-          style="left: {{ startX }}px; top: {{ startY + $item }}px; width: {{ boardSize }}px"
+          style="left: {{ startX }}px; top: {{ startY + $item - gridLineWidth / 2 }}px; width: {{ boardSize }}px; height: {{ gridLineWidth }}px"
         ></div>
       </block>
       <block for="{{ pieces }}" tid="id">
