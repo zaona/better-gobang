@@ -592,6 +592,11 @@ export default {
     systemApp.terminate()
   },
 
+  onBackPress() {
+    // Consume back gesture (e.g., right swipe) to avoid leaving the board unintentionally.
+    return true
+  },
+
   exitApp() {
     if (typeof qa !== "undefined" && typeof qa.exitApplication === "function") {
       qa.exitApplication()
