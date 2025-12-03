@@ -70,7 +70,7 @@ import device from "@system.device"
 
 const BOARD_SIZE = 15
 const WIN_LENGTH = 5
-const SCREEN_WIDTH = 336
+const SCREEN_WIDTH = 400
 const DEFAULT_SCREEN_HEIGHT = 480
 const BOARD_PIXEL = SCREEN_WIDTH
 const BUTTON_WIDTH = 160
@@ -156,12 +156,17 @@ function computeButtonOffset(width = SCREEN_WIDTH) {
   return offset > 0 ? offset : 0
 }
 
+function computeHorizontalOffset(width = SCREEN_WIDTH) {
+  const validWidth = typeof width === "number" && width > 0 ? width : SCREEN_WIDTH
+  return (validWidth - BOARD_PIXEL) / 2
+}
+
 export default {
   private: {
     pieces: [],
     jsonstr: 0,
     screenHeight: DEFAULT_SCREEN_HEIGHT,
-    startX: INITIAL_OFFSET_X,
+    startX: computeHorizontalOffset(),
     startY: computeVerticalOffset(),
     btnTxt: "开始游戏",
     screenWidth: SCREEN_WIDTH,
@@ -175,7 +180,7 @@ export default {
     isDragging: false,
     dragStartPointerX: 0,
     dragStartPointerY: 0,
-    dragStartX: INITIAL_OFFSET_X,
+    dragStartX: computeHorizontalOffset(),
     dragStartY: computeVerticalOffset(),
     ignoreNextClick: false
   },
@@ -198,6 +203,7 @@ export default {
         if (typeof screenWidth === "number" && screenWidth > 0) {
           this.screenWidth = screenWidth
           this.buttonLeft = computeButtonOffset(screenWidth)
+          this.startX = computeHorizontalOffset(screenWidth)
         }
       }
     })
@@ -268,7 +274,7 @@ export default {
     this.aiWins = createMatrix(this.totalPatterns, 0, false)
     this.pieces = []
     this.nextPieceId = 1
-    this.startX = INITIAL_OFFSET_X
+    this.startX = computeHorizontalOffset(this.screenWidth)
     this.startY = computeVerticalOffset(this.screenHeight)
     this.selectedCol = 0
     this.selectedRow = 0
@@ -616,7 +622,6 @@ export default {
 
 <style>
 .demo-page {
-  width: 336px;
   height: 100%;
   position: relative;
   background-color: #000000;
