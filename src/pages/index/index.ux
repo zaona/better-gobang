@@ -4,11 +4,11 @@
       <text class="move-counter">{{ jsonstr }}</text>
       <div
         class="board-frame"
-        style="left: {{ startX - frameWidth - gridLineWidth / 2 }}px; top: {{ startY - frameWidth - gridLineWidth / 2 }}px; width: {{ boardSize + frameWidth * 2 + gridLineWidth }}px; height: {{ boardSize + frameWidth * 2 + gridLineWidth }}px"
+        style="left: {{ startX - frameWidth }}px; top: {{ startY - frameWidth }}px; width: {{ boardSize + frameWidth * 2 }}px; height: {{ boardSize + frameWidth * 2 }}px"
       ></div>
       <div
         class="board-grid"
-        style="left: {{ startX - gridLineWidth / 2 }}px; top: {{ startY - gridLineWidth / 2 }}px; width: {{ boardSize + gridLineWidth }}px; height: {{ boardSize + gridLineWidth }}px"
+        style="left: {{ startX }}px; top: {{ startY }}px; width: {{ boardSize }}px; height: {{ boardSize }}px"
       ></div>
       <block for="{{ verticalLines }}" tid="idx">
         <div
