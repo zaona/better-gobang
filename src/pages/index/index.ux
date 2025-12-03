@@ -3,8 +3,12 @@
     <stack class="stack">
       <text class="move-counter">{{ jsonstr }}</text>
       <div
+        class="board-frame"
+        style="left: {{ startX - frameWidth - gridLineWidth / 2 }}px; top: {{ startY - frameWidth - gridLineWidth / 2 }}px; width: {{ boardSize + frameWidth * 2 + gridLineWidth }}px; height: {{ boardSize + frameWidth * 2 + gridLineWidth }}px"
+      ></div>
+      <div
         class="board-grid"
-        style="left: {{ startX }}px; top: {{ startY }}px; width: {{ boardSize }}px; height: {{ boardSize }}px"
+        style="left: {{ startX - gridLineWidth / 2 }}px; top: {{ startY - gridLineWidth / 2 }}px; width: {{ boardSize + gridLineWidth }}px; height: {{ boardSize + gridLineWidth }}px"
       ></div>
       <block for="{{ verticalLines }}" tid="idx">
         <div
@@ -70,15 +74,17 @@ import device from "@system.device"
 
 const BOARD_SIZE = 15
 const WIN_LENGTH = 5
-const SCREEN_WIDTH = 400
+const SCREEN_WIDTH = 540
 const DEFAULT_SCREEN_HEIGHT = 480
 const BOARD_PIXEL = SCREEN_WIDTH
 const BUTTON_WIDTH = 160
-const CELL_SIZE = BOARD_PIXEL / BOARD_SIZE
+const CELL_SIZE = BOARD_PIXEL / (BOARD_SIZE - 1)
 const PIECE_SIZE = CELL_SIZE * 0.8
-const PIECE_OFFSET = (CELL_SIZE - PIECE_SIZE) / 2
+const PIECE_OFFSET = -PIECE_SIZE / 2
 const CURSOR_SIZE = CELL_SIZE * 1.2
-const CURSOR_OFFSET = (CELL_SIZE - CURSOR_SIZE) / 2
+const CURSOR_OFFSET = -CURSOR_SIZE / 2
+const FRAME_WIDTH = 20
+const GRID_LINE_WIDTH = 2
 const INITIAL_OFFSET_X = 0
 const DRAG_THRESHOLD = 5
 const PLAYER = 1
@@ -86,8 +92,7 @@ const AI = 2
 
 function computeVerticalOffset(height = DEFAULT_SCREEN_HEIGHT) {
   const validHeight = typeof height === "number" ? height : DEFAULT_SCREEN_HEIGHT
-  const offset = (validHeight - BOARD_PIXEL) / 2
-  return offset > 0 ? offset : 0
+  return (validHeight - BOARD_PIXEL) / 2
 }
 
 function createCursorState(src) {
@@ -172,6 +177,8 @@ export default {
     screenWidth: SCREEN_WIDTH,
     buttonLeft: computeButtonOffset(),
     boardSize: BOARD_PIXEL,
+    frameWidth: FRAME_WIDTH,
+    gridLineWidth: GRID_LINE_WIDTH,
     verticalLines: [],
     horizontalLines: [],
     playerCursor: createCursorState("rect57.png"),
@@ -211,7 +218,7 @@ export default {
 
   buildGridLines() {
     const positions = []
-    for (let i = 0; i <= BOARD_SIZE; i++) {
+    for (let i = 0; i < BOARD_SIZE; i++) {
       positions.push(i * CELL_SIZE)
     }
     this.verticalLines = positions
@@ -285,6 +292,8 @@ export default {
     this.gameFinished = true
     this.btnTxt = "开始游戏"
     this.buttonLeft = computeButtonOffset(this.screenWidth)
+    this.frameWidth = FRAME_WIDTH
+    this.gridLineWidth = GRID_LINE_WIDTH
     this.isDragging = false
     this.ignoreNextClick = false
   },
@@ -521,8 +530,8 @@ export default {
 
     const boardX = event.offsetX - this.startX
     const boardY = event.offsetY - this.startY
-    const col = Math.floor(boardX / CELL_SIZE)
-    const row = Math.floor(boardY / CELL_SIZE)
+    const col = Math.round(boardX / CELL_SIZE)
+    const row = Math.round(boardY / CELL_SIZE)
 
     if (
       col < 0 ||
@@ -652,7 +661,7 @@ export default {
   height: 80px;
   background-color: rgba(38, 38, 38, 0.7);
   border: 4px solid rgba(255, 255, 255, 0.06);
-  border-radius: 16px;
+  border-radius: 50%;
   color: #ffffff;
   font-size: 28px;
   display: flex;
@@ -678,16 +687,21 @@ export default {
 
 .board-grid {
   position: absolute;
-  background-color: #f4d9b5;
-  border: 3px solid #a66a1f;
-  border-radius: 12px;
-  box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
+  background-color: #daa06d;
   z-index: 1;
+}
+
+.board-frame {
+  position: absolute;
+  background-color: #daa06d;
+  border-radius: 8px;
+  border: 8px solid #a37d54;
+  z-index: 0;
 }
 
 .grid-line {
   position: absolute;
-  background-color: #b5761e;
+  background-color: rgba(0, 0, 0, 0.4);
   opacity: 0.9;
   z-index: 2;
 }
