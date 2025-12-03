@@ -74,7 +74,7 @@ import device from "@system.device"
 
 const BOARD_SIZE = 15
 const WIN_LENGTH = 5
-const SCREEN_WIDTH = 540
+const SCREEN_WIDTH = 600
 const DEFAULT_SCREEN_HEIGHT = 480
 const BOARD_PIXEL = SCREEN_WIDTH
 const BUTTON_WIDTH = 160
@@ -189,6 +189,8 @@ export default {
     dragStartPointerY: 0,
     dragStartX: computeHorizontalOffset(),
     dragStartY: computeVerticalOffset(),
+    lastPointerX: 0,
+    lastPointerY: 0,
     ignoreNextClick: false
   },
 
@@ -295,6 +297,8 @@ export default {
     this.frameWidth = FRAME_WIDTH
     this.gridLineWidth = GRID_LINE_WIDTH
     this.isDragging = false
+    this.lastPointerX = 0
+    this.lastPointerY = 0
     this.ignoreNextClick = false
   },
 
@@ -555,8 +559,8 @@ export default {
     this.isDragging = true
     this.dragStartPointerX = x
     this.dragStartPointerY = y
-    this.dragStartX = this.startX
-    this.dragStartY = this.startY
+    this.lastPointerX = x
+    this.lastPointerY = y
     this.ignoreNextClick = false
   },
 
@@ -565,22 +569,36 @@ export default {
       return
     }
     const { x, y } = getPointerPosition(event)
-    const deltaX = x - this.dragStartPointerX
-    const deltaY = y - this.dragStartPointerY
-
-    if (Math.abs(deltaX) > DRAG_THRESHOLD || Math.abs(deltaY) > DRAG_THRESHOLD) {
-      this.ignoreNextClick = true
-    }
-
-    this.startX = this.dragStartX + deltaX
-    this.startY = this.dragStartY + deltaY
+    this.lastPointerX = x
+    this.lastPointerY = y
   },
 
-  onTouchEnd() {
+  onTouchEnd(event) {
     if (!this.isDragging) {
       return
     }
     this.isDragging = false
+    const pointer = event
+      ? getPointerPosition(event)
+      : { x: this.lastPointerX || this.dragStartPointerX, y: this.lastPointerY || this.dragStartPointerY }
+    const deltaX = pointer.x - this.dragStartPointerX
+    const deltaY = pointer.y - this.dragStartPointerY
+    this.applySwipeMovement(deltaX, deltaY)
+  },
+
+  applySwipeMovement(deltaX, deltaY) {
+    const absX = Math.abs(deltaX)
+    const absY = Math.abs(deltaY)
+    if (absX <= DRAG_THRESHOLD && absY <= DRAG_THRESHOLD) {
+      this.ignoreNextClick = false
+      return
+    }
+    this.ignoreNextClick = true
+    if (absX >= absY) {
+      this.startX += deltaX > 0 ? CELL_SIZE : -CELL_SIZE
+      return
+    }
+    this.startY += deltaY > 0 ? CELL_SIZE : -CELL_SIZE
   },
 
   updateCursor(col, row, isPlayer) {
@@ -607,8 +625,11 @@ export default {
     systemApp.terminate()
   },
 
-  onBackPress() {
-    // Consume back gesture (e.g., right swipe) to avoid leaving the board unintentionally.
+  onBackPress(event) {
+    if (event && typeof event.preventDefault === "function") {
+      event.preventDefault()
+    }
+    this.applySwipeMovement(CELL_SIZE, 0)
     return true
   },
 
