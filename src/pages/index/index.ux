@@ -38,7 +38,13 @@
       ></image>
     </stack>
     <stack class="stack">
-      <div class="touch-layer" onclick="onBoardClick"></div>
+      <div
+        class="touch-layer"
+        onclick="onBoardClick"
+        ontouchstart="onTouchStart"
+        ontouchmove="onTouchMove"
+        ontouchend="onTouchEnd"
+      ></div>
       <input class="exit-btn" type="button" value="退出" onclick="exitApp" />
       <input class="putbtn" type="button" value="{{ btnTxt }}" onclick="onBtnClick" />
     </stack>
@@ -61,6 +67,7 @@ const PIECE_OFFSET = (CELL_SIZE - PIECE_SIZE) / 2
 const CURSOR_SIZE = CELL_SIZE * 1.2
 const CURSOR_OFFSET = (CELL_SIZE - CURSOR_SIZE) / 2
 const INITIAL_OFFSET_X = 0
+const DRAG_THRESHOLD = 5
 const PLAYER = 1
 const AI = 2
 
@@ -88,6 +95,48 @@ function createMatrix(size, initialValue, nested = true) {
   return Array(size).fill(initialValue)
 }
 
+function getPointerPosition(event = {}) {
+  const touch =
+    (event.touches && event.touches[0]) ||
+    (event.changedTouches && event.changedTouches[0])
+  if (touch) {
+    const x =
+      typeof touch.screenX === "number"
+        ? touch.screenX
+        : typeof touch.clientX === "number"
+        ? touch.clientX
+        : typeof touch.globalX === "number"
+        ? touch.globalX
+        : 0
+    const y =
+      typeof touch.screenY === "number"
+        ? touch.screenY
+        : typeof touch.clientY === "number"
+        ? touch.clientY
+        : typeof touch.globalY === "number"
+        ? touch.globalY
+        : 0
+    return { x, y }
+  }
+  const x =
+    typeof event.offsetX === "number"
+      ? event.offsetX
+      : typeof event.screenX === "number"
+      ? event.screenX
+      : typeof event.clientX === "number"
+      ? event.clientX
+      : 0
+  const y =
+    typeof event.offsetY === "number"
+      ? event.offsetY
+      : typeof event.screenY === "number"
+      ? event.screenY
+      : typeof event.clientY === "number"
+      ? event.clientY
+      : 0
+  return { x, y }
+}
+
 export default {
   private: {
     pieces: [],
@@ -101,7 +150,13 @@ export default {
     horizontalLines: [],
     playerCursor: createCursorState("rect57.png"),
     aiCursor: createCursorState("rect57_red.png"),
-    nextPieceId: 1
+    nextPieceId: 1,
+    isDragging: false,
+    dragStartPointerX: 0,
+    dragStartPointerY: 0,
+    dragStartX: INITIAL_OFFSET_X,
+    dragStartY: computeVerticalOffset(),
+    ignoreNextClick: false
   },
 
   onInit() {
@@ -198,6 +253,8 @@ export default {
     this.isPlayerTurn = true
     this.gameFinished = true
     this.btnTxt = "开始游戏"
+    this.isDragging = false
+    this.ignoreNextClick = false
   },
 
   onBtnClick() {
@@ -421,6 +478,11 @@ export default {
   },
 
   onBoardClick(event) {
+    if (this.ignoreNextClick) {
+      this.ignoreNextClick = false
+      return
+    }
+
     if (this.gameFinished || !this.isPlayerTurn) {
       return
     }
@@ -445,6 +507,39 @@ export default {
     this.hasSelection = true
     this.updateCursor(col, row, true)
     this.jsonstr += 1
+  },
+
+  onTouchStart(event) {
+    const { x, y } = getPointerPosition(event)
+    this.isDragging = true
+    this.dragStartPointerX = x
+    this.dragStartPointerY = y
+    this.dragStartX = this.startX
+    this.dragStartY = this.startY
+    this.ignoreNextClick = false
+  },
+
+  onTouchMove(event) {
+    if (!this.isDragging) {
+      return
+    }
+    const { x, y } = getPointerPosition(event)
+    const deltaX = x - this.dragStartPointerX
+    const deltaY = y - this.dragStartPointerY
+
+    if (Math.abs(deltaX) > DRAG_THRESHOLD || Math.abs(deltaY) > DRAG_THRESHOLD) {
+      this.ignoreNextClick = true
+    }
+
+    this.startX = this.dragStartX + deltaX
+    this.startY = this.dragStartY + deltaY
+  },
+
+  onTouchEnd() {
+    if (!this.isDragging) {
+      return
+    }
+    this.isDragging = false
   },
 
   updateCursor(col, row, isPlayer) {
