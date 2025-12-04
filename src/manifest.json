@@ -1,7 +1,7 @@
 {
   "package": "top.zaona.gobang.better",
   "name": "五子棋",
-  "versionName": "1.6.1",
+  "versionName": "1.6.2",
   "versionCode": 7,
   "minPlatformVersion": 1000,
   "icon": "/common/logo.png",
@@ -22,6 +22,9 @@
       "name": "system.device"
     }
   ],
+  "display": {
+    "backgroundColor": "#000000"
+  },
   "config": {
     "logLevel": "log",
     "designWidth": "device-width"

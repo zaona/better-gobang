@@ -1,7 +1,6 @@
 <template>
-  <div class="demo-page">
+  <div>
     <stack class="stack">
-      <text class="move-counter">{{ jsonstr }}</text>
       <div
         class="board-frame"
         style="left: {{ startX - frameWidth }}px; top: {{ startY - frameWidth }}px; width: {{ boardSize + frameWidth * 2 }}px; height: {{ boardSize + frameWidth * 2 }}px"
@@ -10,38 +9,24 @@
         class="board-grid"
         style="left: {{ startX }}px; top: {{ startY }}px; width: {{ boardSize }}px; height: {{ boardSize }}px"
       ></div>
-      <block for="{{ verticalLines }}" tid="idx">
-        <div
-          class="grid-line vertical"
-          style="left: {{ startX + $item - gridLineWidth / 2 }}px; top: {{ startY }}px; height: {{ boardSize }}px; width: {{ gridLineWidth }}px"
-        ></div>
-      </block>
-      <block for="{{ horizontalLines }}" tid="idx">
-        <div
-          class="grid-line horizontal"
-          style="left: {{ startX }}px; top: {{ startY + $item - gridLineWidth / 2 }}px; width: {{ boardSize }}px; height: {{ gridLineWidth }}px"
-        ></div>
-      </block>
       <block for="{{ pieces }}" tid="id">
         <image
           src="/common/images/{{ $item.src }}"
-          style="left: {{ $item.x + startX }}px; top: {{ $item.y + startY }}px; width: {{ $item.w }}px; height: {{ $item.h }}px; z-index: 2"
+          style="left: {{ $item.x + startX }}px; top: {{ $item.y + startY }}px; width: {{ $item.w }}px; height: {{ $item.h }}px"
         ></image>
       </block>
       <image
-        class="cursor player"
         show="{{ playerCursor.visible }}"
         src="/common/images/{{ playerCursor.src }}"
-        style="left: {{ playerCursor.x + startX }}px; top: {{ playerCursor.y + startY }}px; width: {{ playerCursor.w }}px; height: {{ playerCursor.h }}px; z-index: 3"
+        style="left: {{ playerCursor.x + startX }}px; top: {{ playerCursor.y + startY }}px; width: {{ playerCursor.w }}px; height: {{ playerCursor.h }}px"
       ></image>
       <image
-        class="cursor ai"
         show="{{ aiCursor.visible }}"
         src="/common/images/{{ aiCursor.src }}"
-        style="left: {{ aiCursor.x + startX }}px; top: {{ aiCursor.y + startY }}px; width: {{ aiCursor.w }}px; height: {{ aiCursor.h }}px; z-index: 3"
+        style="left: {{ aiCursor.x + startX }}px; top: {{ aiCursor.y + startY }}px; width: {{ aiCursor.w }}px; height: {{ aiCursor.h }}px"
       ></image>
     </stack>
-    <stack class="stack controls">
+    <stack class="stack">
       <div
         class="touch-layer"
         onclick="onBoardClick"
@@ -84,7 +69,6 @@ const PIECE_OFFSET = -PIECE_SIZE / 2
 const CURSOR_SIZE = CELL_SIZE * 1.2
 const CURSOR_OFFSET = -CURSOR_SIZE / 2
 const FRAME_WIDTH = 20
-const GRID_LINE_WIDTH = 2
 const INITIAL_OFFSET_X = 0
 const DRAG_THRESHOLD = 5
 const PLAYER = 1
@@ -108,15 +92,14 @@ function createCursorState(src) {
 
 function createMatrix(size, initialValue, nested = true) {
   if (nested) {
-    return Array.from({ length: size }, () => Array(size).fill(initialValue))
+    return Array.from({length: size}, () => Array(size).fill(initialValue))
   }
   return Array(size).fill(initialValue)
 }
 
 function getPointerPosition(event = {}) {
   const touch =
-    (event.touches && event.touches[0]) ||
-    (event.changedTouches && event.changedTouches[0])
+    (event.touches && event.touches[0]) || (event.changedTouches && event.changedTouches[0])
   if (touch) {
     const x =
       typeof touch.screenX === "number"
@@ -134,7 +117,7 @@ function getPointerPosition(event = {}) {
         : typeof touch.globalY === "number"
         ? touch.globalY
         : 0
-    return { x, y }
+    return {x, y}
   }
   const x =
     typeof event.offsetX === "number"
@@ -152,7 +135,7 @@ function getPointerPosition(event = {}) {
       : typeof event.clientY === "number"
       ? event.clientY
       : 0
-  return { x, y }
+  return {x, y}
 }
 
 function computeButtonOffset(width = SCREEN_WIDTH) {
@@ -178,9 +161,6 @@ export default {
     buttonLeft: computeButtonOffset(),
     boardSize: BOARD_PIXEL,
     frameWidth: FRAME_WIDTH,
-    gridLineWidth: GRID_LINE_WIDTH,
-    verticalLines: [],
-    horizontalLines: [],
     playerCursor: createCursorState("rect57.png"),
     aiCursor: createCursorState("rect57_red.png"),
     nextPieceId: 1,
@@ -195,7 +175,6 @@ export default {
   },
 
   onInit() {
-    this.buildGridLines()
     this.prepareWinRefs()
     this.resetRuntimeState()
     this.fetchScreenInfo()
@@ -204,7 +183,7 @@ export default {
   fetchScreenInfo() {
     device.getInfo({
       success: (info = {}) => {
-        const { screenHeight, screenWidth } = info
+        const {screenHeight, screenWidth} = info
         if (typeof screenHeight === "number" && screenHeight > 0) {
           this.screenHeight = screenHeight
           this.startY = computeVerticalOffset(screenHeight)
@@ -218,18 +197,9 @@ export default {
     })
   },
 
-  buildGridLines() {
-    const positions = []
-    for (let i = 0; i < BOARD_SIZE; i++) {
-      positions.push(i * CELL_SIZE)
-    }
-    this.verticalLines = positions
-    this.horizontalLines = positions
-  },
-
   prepareWinRefs() {
-    this.winRefs = Array.from({ length: BOARD_SIZE }, () =>
-      Array.from({ length: BOARD_SIZE }, () => [])
+    this.winRefs = Array.from({length: BOARD_SIZE}, () =>
+      Array.from({length: BOARD_SIZE}, () => [])
     )
     let index = 0
 
@@ -295,7 +265,6 @@ export default {
     this.btnTxt = "开始游戏"
     this.buttonLeft = computeButtonOffset(this.screenWidth)
     this.frameWidth = FRAME_WIDTH
-    this.gridLineWidth = GRID_LINE_WIDTH
     this.isDragging = false
     this.lastPointerX = 0
     this.lastPointerY = 0
@@ -489,10 +458,7 @@ export default {
         const playerScore = playerBoard[col][row]
         const aiScore = aiBoard[col][row]
 
-        if (
-          playerScore > bestScore ||
-          (playerScore === bestScore && aiScore > bestAiScore)
-        ) {
+        if (playerScore > bestScore || (playerScore === bestScore && aiScore > bestAiScore)) {
           bestScore = playerScore
           bestPlayerScore = playerScore
           bestAiScore = aiScore
@@ -555,7 +521,7 @@ export default {
   },
 
   onTouchStart(event) {
-    const { x, y } = getPointerPosition(event)
+    const {x, y} = getPointerPosition(event)
     this.isDragging = true
     this.dragStartPointerX = x
     this.dragStartPointerY = y
@@ -568,7 +534,7 @@ export default {
     if (!this.isDragging) {
       return
     }
-    const { x, y } = getPointerPosition(event)
+    const {x, y} = getPointerPosition(event)
     this.lastPointerX = x
     this.lastPointerY = y
   },
@@ -580,7 +546,10 @@ export default {
     this.isDragging = false
     const pointer = event
       ? getPointerPosition(event)
-      : { x: this.lastPointerX || this.dragStartPointerX, y: this.lastPointerY || this.dragStartPointerY }
+      : {
+          x: this.lastPointerX || this.dragStartPointerX,
+          y: this.lastPointerY || this.dragStartPointerY
+        }
     const deltaX = pointer.x - this.dragStartPointerX
     const deltaY = pointer.y - this.dragStartPointerY
     this.applySwipeMovement(deltaX, deltaY)
@@ -651,12 +620,6 @@ export default {
 </script>
 
 <style>
-.demo-page {
-  height: 100%;
-  position: relative;
-  background-color: #000000;
-}
-
 .stack {
   width: 100%;
   height: 100%;
@@ -671,13 +634,12 @@ export default {
   position: absolute;
   left: 0;
   top: 0;
-  z-index: 1;
 }
 
 .exit-btn,
 .putbtn {
   position: absolute;
-  left:50%;
+  left: 50%;
   width: 160px;
   height: 80px;
   background-color: rgba(38, 38, 38, 0.7);
@@ -688,15 +650,14 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 2;
 }
 
 .exit-btn {
-  top: 32px;
+  top: 30px;
 }
 
 .putbtn {
-  bottom: 32px;
+  bottom: 30px;
 }
 
 .move-counter {
@@ -708,8 +669,9 @@ export default {
 
 .board-grid {
   position: absolute;
-  background-color: #daa06d;
-  z-index: 1;
+  background-image: url("/common/images/bg.png");
+  border: 1px solid #000000;
+  background-size: cover;
 }
 
 .board-frame {
@@ -717,22 +679,5 @@ export default {
   background-color: #daa06d;
   border-radius: 8px;
   border: 8px solid #a37d54;
-  z-index: 0;
 }
-
-.grid-line {
-  position: absolute;
-  background-color: rgba(0, 0, 0, 0.4);
-  opacity: 0.9;
-  z-index: 2;
-}
-
-.grid-line.vertical {
-  width: 2px;
-}
-
-.grid-line.horizontal {
-  height: 2px;
-}
-
 </style>
