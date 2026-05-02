@@ -1,8 +1,8 @@
 {
   "package": "top.zaona.gobang.better",
   "name": "五子棋",
-  "versionName": "1.6.3",
-  "versionCode": 8,
+  "versionName": "1.6.4",
+  "versionCode":  9,
   "minPlatformVersion": 1000,
   "icon": "/common/logo.png",
   "deviceTypeList": [
