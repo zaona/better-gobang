@@ -5,10 +5,11 @@
         class="board-frame"
         style="left: {{ startX - frameWidth }}px; top: {{ startY - frameWidth }}px; width: {{ boardSize + frameWidth * 2 }}px; height: {{ boardSize + frameWidth * 2 }}px"
       ></div>
-      <div
+      <image
         class="board-grid"
+        src="/common/images/bg.png"
         style="left: {{ startX }}px; top: {{ startY }}px; width: {{ boardSize }}px; height: {{ boardSize }}px"
-      ></div>
+      ></image>
       <block for="{{ pieces }}" tid="id">
         <image
           src="/common/images/{{ $item.src }}"
@@ -647,9 +648,7 @@ export default {
 
 .board-grid {
   position: absolute;
-  background-image: url("/common/images/bg.png");
   border: 1px solid #000000;
-  background-size: cover;
 }
 
 .board-frame {
