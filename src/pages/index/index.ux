@@ -7,7 +7,7 @@
       ></div>
       <image
         class="board-grid"
-        src="/common/images/bg.png"
+        src="/common/images/bg.bin"
         style="left: {{ startX }}px; top: {{ startY }}px; width: {{ boardSize }}px; height: {{ boardSize }}px"
       ></image>
       <block for="{{ pieces }}" tid="id">
@@ -162,8 +162,8 @@ export default {
     buttonLeft: computeButtonOffset(),
     boardSize: BOARD_PIXEL,
     frameWidth: FRAME_WIDTH,
-    playerCursor: createCursorState("rect57.png"),
-    aiCursor: createCursorState("rect57_red.png"),
+    playerCursor: createCursorState("rect57.bin"),
+    aiCursor: createCursorState("rect57_red.bin"),
     nextPieceId: 1,
     isDragging: false,
     dragStartPointerX: 0,
@@ -257,8 +257,8 @@ export default {
     this.selectedCol = 0
     this.selectedRow = 0
     this.hasSelection = false
-    this.playerCursor = createCursorState("rect57.png")
-    this.aiCursor = createCursorState("rect57_red.png")
+    this.playerCursor = createCursorState("rect57.bin")
+    this.aiCursor = createCursorState("rect57_red.bin")
     this.isPlayerTurn = true
     this.gameFinished = true
     this.btnTxt = "开始游戏"
@@ -317,7 +317,7 @@ export default {
   dropPiece(col, row, owner) {
     const x = col * CELL_SIZE + PIECE_OFFSET
     const y = row * CELL_SIZE + PIECE_OFFSET
-    const src = owner === PLAYER ? "black.png" : "white.png"
+    const src = owner === PLAYER ? "black.bin" : "white.bin"
     const piece = {
       id: this.nextPieceId++,
       x,
